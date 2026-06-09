@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>ZANO TETRIS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+  :root {
+    --gold: #ffd700;
+    --silver: #c0c0c0;
+    --bg: #0a0a12;
+    --panel: #13131f;
+    --border: #2a2a4a;
+    --text: #e0e0ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Press Start 2P', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 12px 0 24px;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, #1a0a3a 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, #0a1a3a 0%, transparent 60%);
+  }
+
+  #title {
+    font-size: 26px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-shadow: 0 0 20px #ffd70099, 0 0 40px #ffd70033;
+    margin-bottom: 6px;
+  }
+
+  #subtitle {
+    font-size: 7px;
+    color: #5566aa;
+    letter-spacing: 6px;
+    margin-bottom: 10px;
+  }
+
+  #mission {
+    font-size: 8px;
+    color: #ffee55;
+    text-shadow: 0 0 10px #ffee5588;
+    min-height: 14px;
+    margin-bottom: 8px;
+    animation: blink 1.2s infinite;
+    display: inline-block;
+    transition: color 0.6s, text-shadow 0.6s, transform 0.4s;
+    transform-origin: center;
+  }
+
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  #arena {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .side-panel {
+    width: 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 4px;
+    gap: 4px;
+  }
+
+  .panel-label {
+    font-size: 6px;
+    color: #5566aa;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .medal-slot {
+    width: 44px;
+    height: 44px;
+    border: 2px dashed #2a2a4a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+
+  .medal-slot.earned {
+    background: radial-gradient(circle at 35% 35%, #fff7a0, #ffd700 50%, #b8860b);
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 12px #ffd70099;
+    animation: medalPop 0.4s ease-out;
+  }
+
+  @keyframes medalPop {
+    0%  { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.3); }
+    100%{ transform: scale(1); opacity: 1; }
+  }
+
+  .medal-star {
+    font-size: 18px;
+    color: #5c3a00;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+
+  canvas {
+    background: #000008;
+    display: block;
+    border: 2px solid var(--border);
+    box-shadow: 0 0 30px #0000ff22, inset 0 0 20px #00000088;
+    image-rendering: pixelated;
+    outline: none;
+  }
+
+  #info-panel {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    font-size: 8px;
+    color: #8899cc;
+  }
+
+  #info-panel span { color: #aabbee; }
+
+  /* ── OVERLAY ── */
+  #overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.82);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 24px;
+    backdrop-filter: blur(4px);
+  }
+
+  #overlay.visible { display: flex; }
+
+  #overlay-title {
+    font-size: 28px;
+    letter-spacing: 4px;
+  }
+
+  #overlay-title.gameover { color: #ff3344; text-shadow: 0 0 30px #ff334499; }
+  #overlay-title.win      { color: #ffd700;  text-shadow: 0 0 30px #ffd70099; }
+
+  #overlay-score {
+    font-size: 9px;
+    color: #8899cc;
+  }
+
+  #overlay-prompt {
+    font-size: 11px;
+    color: var(--text);
+    margin-top: 8px;
+  }
+
+  #overlay-buttons {
+    display: flex;
+    gap: 20px;
+    margin-top: 4px;
+  }
+
+  .btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    padding: 12px 28px;
+    border: 2px solid;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 2px;
+  }
+
+  .btn-yes {
+    color: #44ff88;
+    border-color: #44ff88;
+  }
+  .btn-yes:hover {
+    background: #44ff8822;
+    box-shadow: 0 0 16px #44ff8866;
+  }
+
+  .btn-no {
+    color: #ff4455;
+    border-color: #ff4455;
+  }
+  .btn-no:hover {
+    background: #ff445522;
+    box-shadow: 0 0 16px #ff445566;
+  }
+
+  #speed-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  #speed-label { font-size: 6px; color: #5566aa; }
+  #speed-bar-bg {
+    width: 140px; height: 6px;
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #speed-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #44ff88, #ffee55);
+    transition: width 0.5s;
+  }
+</style>
+</head>
+<body>
+
+<div id="title">ZANO TETRIS</div>
+<div id="subtitle">MISSIONS EDITION</div>
+<div id="mission">inizia a giocare…</div>
+
+<div id="arena">
+  <!-- medaglie sinistra -->
+  <div class="side-panel" id="leftPanel">
+    <div class="panel-label">★★★</div>
+    <div class="medal-slot" id="m0"></div>
+    <div class="medal-slot" id="m1"></div>
+    <div class="medal-slot" id="m2"></div>
+  </div>
+
+  <canvas id="game" width="300" height="600" tabindex="0"></canvas>
+
+  <!-- medaglie destra -->
+  <div class="side-panel" id="rightPanel">
+    <div class="panel-label">★★★</div>
+    <div class="medal-slot" id="m3"></div>
+    <div class="medal-slot" id="m4"></div>
+    <div class="medal-slot" id="m5"></div>
+  </div>
+</div>
+
+<div id="info-panel">
+  <div>SCORE <span id="score">0</span></div>
+  <div>LIVELLO <span id="level">1</span></div>
+</div>
+
+<div id="speed-bar-wrap">
+  <div id="speed-label">VELOCITÀ</div>
+  <div id="speed-bar-bg"><div id="speed-bar-fill"></div></div>
+</div>
+
+<!-- OVERLAY GAME OVER / WIN -->
+<div id="overlay">
+  <div id="overlay-title"></div>
+  <div id="overlay-score"></div>
+  <div id="overlay-prompt">VUOI GIOCARE ANCORA?</div>
+  <div id="overlay-buttons">
+    <button class="btn btn-yes" id="btnSi">S</button>
+    <button class="btn btn-no"  id="btnNo">N</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const ROWS = 20, COLS = 10, SIZE = 30;
+
+// ── velocità per livello (ms per drop) ──────────────────────────
+// Lento all'inizio, accelera col punteggio
+function speedFromScore(s) {
+  if (s <  50)  return 900;
+  if (s < 120)  return 700;
+  if (s < 250)  return 500;
+  if (s < 450)  return 350;
+  if (s < 700)  return 220;
+  return 130;
+}
+
+function levelFromScore(s) {
+  if (s <  50)  return 1;
+  if (s < 120)  return 2;
+  if (s < 250)  return 3;
+  if (s < 450)  return 4;
+  if (s < 700)  return 5;
+  return 6;
+}
+
+// ── pezzi e colori ──────────────────────────────────────────────
+const SHAPES = [
+  [[1,1,1,1]],
+  [[1,0,0],[1,1,1]],
+  [[0,0,1],[1,1,1]],
+  [[1,1],[1,1]],
+  [[0,1,1],[1,1,0]],
+  [[1,1,0],[0,1,1]],
+  [[0,1,0],[1,1,1]]
+];
+const COLORS = ["cyan","blue","orange","yellow","green","purple","red"];
+
+const IT = { cyan:"azzurra", red:"rossa", blue:"blu", green:"verde",
+             purple:"viola", yellow:"gialla", orange:"arancione" };
+
+// ── stato globale ────────────────────────────────────────────────
+let board, piece, score, gameOver, pezzi, mission, medalCount;
+
+function initState() {
+  board     = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+  score     = 0;
+  gameOver  = false;
+  pezzi     = 0;
+  mission   = null;
+  missionSteps = null;
+  medalCount = 0;
+
+  // reset medaglie UI
+  for (let i = 0; i < 6; i++) {
+    const s = document.getElementById("m" + i);
+    s.classList.remove("earned");
+    s.innerHTML = "";
+  }
+
+  document.getElementById("score").textContent  = "0";
+  document.getElementById("level").textContent  = "1";
+  document.getElementById("speed-bar-fill").style.width = "0%";
+  document.getElementById("mission").textContent = "fai 5 pezzi per la prima missione…";
+
+  piece = newPiece();
+}
+
+function newPiece() {
+  const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+  const color = pickColor();
+  return { shape, color, x: 3, y: 0 };
+}
+
+// ── colore con bias verso la missione ────────────────────────────
+// Al livello 1 la probabilità di pescare un colore della missione
+// è ~70%; sale al 55% al livello 3, scende al 35% ai livelli 5-6.
+// Se non c'è missione attiva, scelta puramente casuale.
+function pickColor() {
+  if (!missionSteps) {
+    return COLORS[Math.floor(Math.random() * COLORS.length)];
+  }
+
+  // colori degli step ancora da completare
+  const needed = missionSteps
+    .filter(s => s.done < s.needed)
+    .map(s => s.color);
+
+  if (needed.length === 0) {
+    return COLORS[Math.floor(Math.random() * COLORS.length)];
+  }
+
+  const lv = levelFromScore(score);
+  const biasTable = [0.70, 0.62, 0.52, 0.44, 0.36, 0.30];
+  const bias = biasTable[Math.min(lv - 1, 5)];
+
+  if (Math.random() < bias) {
+    return needed[Math.floor(Math.random() * needed.length)];
+  } else {
+    return COLORS[Math.floor(Math.random() * COLORS.length)];
+  }
+}
+
+// ── feedback visivo missione completata ──────────────────────────
+function flashMission() {
+  const el = document.getElementById("mission");
+  el.style.transition = "none";
+  el.style.color = "#44ff88";
+  el.style.textShadow = "0 0 18px #44ff88, 0 0 40px #44ff8866";
+  el.style.transform = "scale(1.15)";
+  el.style.display = "inline-block";
+  el.textContent = "✓ MISSIONE COMPLETATA!";
+  setTimeout(() => {
+    el.style.transition = "color 0.6s, text-shadow 0.6s, transform 0.4s";
+    el.style.color = "";
+    el.style.textShadow = "";
+    el.style.transform = "";
+  }, 900);
+}
+
+
+// feedback passo intermedio (es. "✓ riga rossa! ora arancione…")
+function flashStep(color) {
+  const el = document.getElementById("mission");
+  const prev = el.textContent;
+  el.style.transition = "none";
+  el.style.color = color;
+  el.style.textShadow = "0 0 14px " + color;
+  el.textContent = "✓ riga " + IT[color] + "! continua…";
+  setTimeout(() => {
+    el.style.transition = "color 0.5s, text-shadow 0.5s";
+    el.style.color = "";
+    el.style.textShadow = "";
+    aggiornaTestoMissione();
+  }, 800);
+}
+
+
+const POSSIBILI = [
+  [{ color:"yellow",  needed:1 }],
+  [{ color:"red",     needed:1 }],
+  [{ color:"blue",    needed:1 }],
+  [{ color:"green",   needed:1 }],
+  [{ color:"yellow",  needed:2 }],
+  [{ color:"blue",    needed:2 }],
+  [{ color:"red",     needed:1 }, { color:"orange",  needed:1 }],
+  [{ color:"green",   needed:1 }, { color:"purple",  needed:1 }],
+  [{ color:"blue",    needed:1 }, { color:"cyan",    needed:1 }],
+  [{ color:"cyan",    needed:1 }, { color:"yellow",  needed:1 }],
+  [{ color:"orange",  needed:2 }],
+];
+
+let missionSteps = null;
+
+function nuovaMissione() {
+  const template = POSSIBILI[Math.floor(Math.random() * POSSIBILI.length)];
+  missionSteps = template.map(s => ({ ...s, done: 0 }));
+  mission = missionSteps.map(s => s.color);
+  aggiornaTestoMissione();
+}
+
+function aggiornaTestoMissione() {
+  if (!missionSteps) return;
+  const parti = missionSteps.map(s => {
+    const rimaste = s.needed - s.done;
+    return rimaste + " riga" + (rimaste !== 1 ? " " : " ") + IT[s.color];
+  });
+  document.getElementById("mission").textContent = "Fai: " + parti.join(" + ");
+}
+
+function checkLineVsMission(line) {
+  if (!missionSteps) return false;
+  for (const step of missionSteps) {
+    if (step.done >= step.needed) continue;
+    const count = line.filter(c => c === step.color).length;
+    if (count >= 8) { step.done++; return true; }
+  }
+  return false;
+}
+
+function missioneCompletata() {
+  return missionSteps && missionSteps.every(s => s.done >= s.needed);
+}
+
+// ── medaglie ─────────────────────────────────────────────────────
+function addMedal() {
+  if (medalCount >= 6) return;
+  const slot = document.getElementById("m" + medalCount);
+  slot.classList.add("earned");
+  slot.innerHTML = '<span class="medal-star">★</span>';
+  medalCount++;
+
+  if (medalCount === 6) {
+    endGame(true);
+  }
+}
+
+// ── disegno ──────────────────────────────────────────────────────
+function drawBlock(x, y, c) {
+  ctx.fillStyle = c;
+  ctx.fillRect(x*SIZE, y*SIZE, SIZE-1, SIZE-1);
+  // highlight
+  ctx.fillStyle = "rgba(255,255,255,0.18)";
+  ctx.fillRect(x*SIZE, y*SIZE, SIZE-1, 4);
+  ctx.fillRect(x*SIZE, y*SIZE, 4, SIZE-1);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, 300, 600);
+
+  // griglia leggera
+  ctx.strokeStyle = "#ffffff08";
+  ctx.lineWidth = 0.5;
+  for (let r = 0; r < ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(0, r*SIZE); ctx.lineTo(300, r*SIZE); ctx.stroke();
+  }
+  for (let c = 0; c < COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(c*SIZE, 0); ctx.lineTo(c*SIZE, 600); ctx.stroke();
+  }
+
+  board.forEach((row, y) => row.forEach((c, x) => { if (c) drawBlock(x, y, c); }));
+  piece.shape.forEach((row, y) => row.forEach((c, x) => {
+    if (c) drawBlock(piece.x + x, piece.y + y, piece.color);
+  }));
+}
+
+// ── logica ───────────────────────────────────────────────────────
+function collide(p) {
+  return p.shape.some((row, y) => row.some((c, x) => {
+    let nx = p.x + x, ny = p.y + y;
+    return c && (nx < 0 || nx >= COLS || ny >= ROWS || (ny >= 0 && board[ny][nx]));
+  }));
+}
+
+function merge() {
+  piece.shape.forEach((row, y) => row.forEach((c, x) => {
+    if (c) board[piece.y + y][piece.x + x] = piece.color;
+  }));
+}
+
+function rotate() {
+  const r = piece.shape[0].map((_, i) => piece.shape.map(row => row[i]).reverse());
+  const old = piece.shape;
+  piece.shape = r;
+  if (collide(piece)) piece.shape = old;
+}
+
+function clearLines() {
+  const cleared = [];
+  board = board.filter(row => {
+    if (row.every(c => c)) { cleared.push(row); return false; }
+    return true;
+  });
+  while (board.length < ROWS) board.unshift(Array(COLS).fill(0));
+
+  cleared.forEach(line => {
+    if (!missionSteps) return;
+    // trova il primo step non ancora completato che questa riga soddisfa
+    for (const step of missionSteps) {
+      if (step.done >= step.needed) continue;
+      const count = line.filter(c => c === step.color).length;
+      if (count >= 8) {
+        step.done++;
+        // aggiorna testo: se la missione non è ancora completata mostra progresso
+        if (missioneCompletata()) {
+          flashMission();
+          addMedal();
+          nuovaMissione();
+        } else {
+          flashStep(step.color);
+          aggiornaTestoMissione();
+        }
+        break; // una riga conta per un solo step
+      }
+    }
+  });
+
+  score += cleared.length * 10;
+  document.getElementById("score").textContent = score;
+  document.getElementById("level").textContent = levelFromScore(score);
+
+  // barra velocità (0–100%)
+  const pct = Math.min(100, Math.round((900 - speedFromScore(score)) / 7.7));
+  document.getElementById("speed-bar-fill").style.width = pct + "%";
+}
+
+function drop() {
+  piece.y++;
+  if (collide(piece)) {
+    piece.y--;
+    merge();
+    clearLines();
+    piece = newPiece();
+    pezzi++;
+    if (pezzi === 5 && !missionSteps) nuovaMissione();
+    if (collide(piece)) endGame(false);
+  }
+}
+
+// ── fine gioco / vittoria ────────────────────────────────────────
+function endGame(win) {
+  gameOver = true;
+  const overlay = document.getElementById("overlay");
+  const title   = document.getElementById("overlay-title");
+  const sc      = document.getElementById("overlay-score");
+
+  if (win) {
+    title.textContent = "HAI VINTO!";
+    title.className   = "win";
+  } else {
+    title.textContent = "GAME OVER";
+    title.className   = "gameover";
+  }
+  sc.textContent = "Punteggio finale: " + score;
+  overlay.classList.add("visible");
+}
+
+document.getElementById("btnSi").addEventListener("click", () => {
+  document.getElementById("overlay").classList.remove("visible");
+  initState();
+  last = 0;
+  canvas.focus();
+  requestAnimationFrame(loop);
+});
+
+document.getElementById("btnNo").addEventListener("click", () => {
+  document.getElementById("overlay-prompt").textContent = "Grazie per aver giocato!";
+  document.getElementById("overlay-buttons").style.display = "none";
+});
+
+// ── controlli ────────────────────────────────────────────────────
+canvas.addEventListener("keydown", e => {
+  if (gameOver) return;
+  if (e.key === "ArrowLeft")  { piece.x--; if (collide(piece)) piece.x++; }
+  if (e.key === "ArrowRight") { piece.x++; if (collide(piece)) piece.x--; }
+  if (e.key === "ArrowDown")  { drop(); }
+  if (e.code === "Space")     { rotate(); e.preventDefault(); }
+  e.preventDefault();
+});
+
+// ── loop principale ───────────────────────────────────────────────
+let last = 0;
+
+function loop(t = 0) {
+  if (gameOver) return;
+  const speed = speedFromScore(score);
+  if (t - last > speed) { drop(); last = t; }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// avvio
+initState();
+canvas.focus();
+loop();
+</script>
+</body>
+</html>
