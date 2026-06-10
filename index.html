@@ -2,6 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ZANO TETRIS</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -221,6 +222,73 @@
     background: linear-gradient(90deg, #44ff88, #ffee55);
     transition: width 0.5s;
   }
+
+  /* ── CONTROLLI MOBILE ── */
+  #mobile-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    width: 100%;
+    max-width: 320px;
+    padding: 0 12px;
+  }
+
+  .ctrl-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .ctrl-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    width: 70px;
+    height: 70px;
+    background: #13131f;
+    border: 2px solid #2a2a4a;
+    color: #aabbee;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: background 0.08s, border-color 0.08s, transform 0.08s;
+    box-shadow: 0 4px 0 #0a0a12;
+  }
+
+  .ctrl-btn:active, .ctrl-btn.pressed {
+    background: #1f1f3a;
+    border-color: #5566aa;
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #0a0a12;
+  }
+
+  .ctrl-btn.rotate-btn {
+    width: 100px;
+    height: 70px;
+    color: #ffd700;
+    border-color: #ffd70066;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  /* Scala il canvas su schermi piccoli */
+  @media (max-width: 480px) {
+    body { padding: 8px 0 24px; }
+    #title { font-size: 18px; }
+    #arena { gap: 8px; }
+    .side-panel { width: 44px; }
+    .medal-slot { width: 32px; height: 32px; }
+    canvas {
+      width: 240px !important;
+      height: 480px !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -259,7 +327,17 @@
   <div id="speed-bar-bg"><div id="speed-bar-fill"></div></div>
 </div>
 
-<!-- OVERLAY GAME OVER / WIN -->
+<!-- CONTROLLI TOUCH/MOBILE -->
+<div id="mobile-controls">
+  <div class="ctrl-row">
+    <button class="ctrl-btn rotate-btn" id="btnRotate">↻ RUOTA</button>
+  </div>
+  <div class="ctrl-row">
+    <button class="ctrl-btn" id="btnLeft">◀</button>
+    <button class="ctrl-btn" id="btnDown">▼</button>
+    <button class="ctrl-btn" id="btnRight">▶</button>
+  </div>
+</div>
 <div id="overlay">
   <div id="overlay-title"></div>
   <div id="overlay-score"></div>
@@ -609,6 +687,53 @@ canvas.addEventListener("keydown", e => {
   if (e.code === "Space")     { rotate(); e.preventDefault(); }
   e.preventDefault();
 });
+
+// ── controlli touch/pulsanti ──────────────────────────────────────
+function pressEffect(btn, action) {
+  btn.classList.add("pressed");
+  action();
+  setTimeout(() => btn.classList.remove("pressed"), 120);
+}
+
+// Supporto sia click che touch (evita doppio trigger)
+function addCtrl(id, action) {
+  const btn = document.getElementById(id);
+  btn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    if (gameOver) return;
+    pressEffect(btn, action);
+  }, { passive: false });
+  btn.addEventListener("mousedown", e => {
+    if (gameOver) return;
+    pressEffect(btn, action);
+  });
+}
+
+addCtrl("btnRotate", () => { rotate(); });
+
+// Tieni premuto per scorrere veloce (sinistra/destra/giù)
+function addHoldCtrl(id, action) {
+  const btn = document.getElementById(id);
+  let interval = null;
+  function start(e) {
+    e.preventDefault();
+    if (gameOver) return;
+    action();
+    interval = setInterval(() => { if (!gameOver) action(); }, 120);
+  }
+  function stop() { clearInterval(interval); interval = null; }
+  btn.addEventListener("touchstart", start, { passive: false });
+  btn.addEventListener("touchend",   stop,  { passive: false });
+  btn.addEventListener("touchcancel",stop,  { passive: false });
+  btn.addEventListener("mousedown",  start);
+  btn.addEventListener("mouseup",    stop);
+  btn.addEventListener("mouseleave", stop);
+}
+
+// Sostituiamo addCtrl per i movimenti direzionali con versione hold
+addHoldCtrl("btnLeft",  () => { piece.x--; if (collide(piece)) piece.x++; });
+addHoldCtrl("btnRight", () => { piece.x++; if (collide(piece)) piece.x--; });
+addHoldCtrl("btnDown",  () => { drop(); });
 
 // ── loop principale ───────────────────────────────────────────────
 let last = 0;
