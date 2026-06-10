@@ -228,16 +228,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    margin-top: 16px;
+    gap: 8px;
+    margin-top: 10px;
     width: 100%;
     max-width: 320px;
-    padding: 0 12px;
+    padding: 0 8px;
   }
 
   .ctrl-row {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     justify-content: center;
   }
 
@@ -277,17 +277,36 @@
     letter-spacing: 1px;
   }
 
-  /* Scala il canvas su schermi piccoli */
+  /* ── LAYOUT MOBILE COMPATTO (schermata unica) ── */
   @media (max-width: 480px) {
-    body { padding: 8px 0 24px; }
-    #title { font-size: 18px; }
-    #arena { gap: 8px; }
-    .side-panel { width: 44px; }
-    .medal-slot { width: 32px; height: 32px; }
-    canvas {
-      width: 240px !important;
-      height: 480px !important;
-    }
+    body { padding: 4px 0 8px; min-height: 100dvh; justify-content: flex-start; }
+    #title { font-size: 14px; margin-bottom: 2px; }
+    #subtitle { font-size: 5px; margin-bottom: 4px; }
+    #mission { font-size: 6px; margin-bottom: 4px; min-height: 10px; }
+    #arena { gap: 4px; }
+    .side-panel { width: 32px; padding-top: 2px; gap: 2px; }
+    .panel-label { font-size: 5px; }
+    .medal-slot { width: 26px; height: 26px; border-width: 1px; }
+    .medal-star { font-size: 12px; }
+    canvas { width: 210px !important; height: 420px !important; }
+    #info-panel { font-size: 6px; gap: 12px; margin-top: 4px; }
+    #speed-bar-wrap { gap: 2px; }
+    #speed-label { font-size: 5px; }
+    #speed-bar-bg { width: 110px; height: 5px; }
+    #mobile-controls { gap: 6px; margin-top: 6px; }
+    .ctrl-row { gap: 6px; }
+    .ctrl-btn { width: 56px; height: 56px; font-size: 16px; border-radius: 6px; }
+    .ctrl-btn.rotate-btn { width: 80px; height: 52px; font-size: 9px; }
+  }
+
+  /* Schermi molto piccoli (iPhone SE, ecc.) */
+  @media (max-width: 375px) {
+    #title { font-size: 12px; }
+    canvas { width: 190px !important; height: 380px !important; }
+    .ctrl-btn { width: 50px; height: 50px; font-size: 14px; }
+    .ctrl-btn.rotate-btn { width: 72px; height: 46px; font-size: 8px; }
+    .side-panel { width: 28px; }
+    .medal-slot { width: 22px; height: 22px; }
   }
 </style>
 </head>
@@ -698,12 +717,17 @@ function pressEffect(btn, action) {
 // Supporto sia click che touch (evita doppio trigger)
 function addCtrl(id, action) {
   const btn = document.getElementById(id);
+  let touched = false;
   btn.addEventListener("touchstart", e => {
     e.preventDefault();
+    e.stopPropagation();
+    touched = true;
     if (gameOver) return;
     pressEffect(btn, action);
+    setTimeout(() => { touched = false; }, 300);
   }, { passive: false });
   btn.addEventListener("mousedown", e => {
+    if (touched) return;
     if (gameOver) return;
     pressEffect(btn, action);
   });
@@ -715,6 +739,7 @@ addCtrl("btnRotate", () => { rotate(); });
 function addHoldCtrl(id, action) {
   const btn = document.getElementById(id);
   let interval = null;
+  let touched = false;
   function start(e) {
     e.preventDefault();
     if (gameOver) return;
@@ -722,10 +747,14 @@ function addHoldCtrl(id, action) {
     interval = setInterval(() => { if (!gameOver) action(); }, 120);
   }
   function stop() { clearInterval(interval); interval = null; }
-  btn.addEventListener("touchstart", start, { passive: false });
-  btn.addEventListener("touchend",   stop,  { passive: false });
-  btn.addEventListener("touchcancel",stop,  { passive: false });
-  btn.addEventListener("mousedown",  start);
+  btn.addEventListener("touchstart", e => {
+    touched = true;
+    start(e);
+    setTimeout(() => { touched = false; }, 500);
+  }, { passive: false });
+  btn.addEventListener("touchend",    stop, { passive: false });
+  btn.addEventListener("touchcancel", stop, { passive: false });
+  btn.addEventListener("mousedown",  e => { if (!touched) start(e); });
   btn.addEventListener("mouseup",    stop);
   btn.addEventListener("mouseleave", stop);
 }
