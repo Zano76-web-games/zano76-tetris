@@ -608,10 +608,35 @@ function merge() {
 }
 
 function rotate() {
-  const r = piece.shape[0].map((_, i) => piece.shape.map(row => row[i]).reverse());
-  const old = piece.shape;
+  const oldShape = piece.shape;
+  const oldX = piece.x;
+
+  // Trasponi e inverti per ruotare di 90°
+  const r = oldShape[0].map((_, i) => oldShape.map(row => row[i]).reverse());
   piece.shape = r;
-  if (collide(piece)) piece.shape = old;
+
+  // Ricalcola offset per mantenere il centro geometrico fisso
+  const oldW = oldShape[0].length;
+  const oldH = oldShape.length;
+  const newW = r[0].length;
+  const newH = r.length;
+  piece.x += Math.round((oldW - newW) / 2);
+  piece.y += Math.round((oldH - newH) / 2);
+
+  // Wall kick: se collide, prova a spostare lateralmente
+  if (collide(piece)) {
+    const kicks = [1, -1, 2, -2];
+    let fixed = false;
+    for (const k of kicks) {
+      piece.x += k;
+      if (!collide(piece)) { fixed = true; break; }
+      piece.x -= k;
+    }
+    if (!fixed) {
+      piece.shape = oldShape;
+      piece.x = oldX;
+    }
+  }
 }
 
 function clearLines() {
